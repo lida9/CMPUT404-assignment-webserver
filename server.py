@@ -37,8 +37,11 @@ class MyWebServer(socketserver.BaseRequestHandler):
         # extract information
         method = self.data[0].split()[0]
         path = self.data[0].split()[1]
-        host = "http://" + self.data[1].split()[1]
         target_path = os.path.abspath(os.getcwd()) + '/www'
+
+        # get the server address
+        address = self.server.server_address
+        host = "http://" + address[0]+":"+str(address[1])
 
         if method != "GET":
             # invalid method
@@ -50,10 +53,10 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 self.location_moved(host+path+"/")
             else:
                 is_dir = True
-                self.successful_response(target_path, is_dir)
+                self.process_file(target_path, is_dir)
         elif os.path.isfile(target_path+os.path.abspath(path)):
             # the path is a file
-            self.successful_response(target_path+path)
+            self.process_file(target_path+path)
         else:
             # invalid path
             self.invalid_path()
@@ -71,7 +74,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
         content = ""
         self.send_response(status, header, content)
 
-    # correct path
+    # handles incorrect path
     def location_moved(self, address):
         status = "301 Moved Permanently"
         header = "Content-Type: text/html \r\nLocation: " + address + "\r\n"
@@ -95,18 +98,23 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 </html>"""
         self.send_response(status, header, content)
 
-    # valid request
-    def successful_response(self, target_path, is_dir=False):
+    # read from file
+    def process_file(self, target_path, is_dir=False):
         status = "200 OK"
         if is_dir:
             header = "Content-Type: text/html\r\n"
             content = open(target_path+"index.html").read()
+            self.send_response(status, header, content)
         else:
             # get the extension of the file
             ext = target_path.split(".")[-1]
-            header = "Content-Type: text/" + ext + "\r\n"
-            content = open(target_path).read()
-        self.send_response(status, header, content)
+            if (ext == "css" or ext == "html"):
+                header = "Content-Type: text/" + ext + "\r\n"
+                content = open(target_path).read()
+                self.send_response(status, header, content)
+            else:
+                # mime type not supported
+                self.invalid_path()
 
 
 if __name__ == "__main__":
