@@ -25,3 +25,10 @@ examples thus some of the code is Copyright © 2001-2013 Python
 Software Foundation; All Rights Reserved under the PSF license (GPL
 compatible) http://docs.python.org/2/library/socketserver.html
 
+# References
+
+https://stackoverflow.com/a/37863619/13544994
+This answer provides usage of os.path.abspath
+
+https://stackoverflow.com/questions/22997717/python-socketserver-get-own-ip
+This post shows how to get the server address
