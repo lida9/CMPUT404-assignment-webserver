@@ -29,94 +29,93 @@ import os
 
 
 class MyWebServer(socketserver.BaseRequestHandler):
-	
-	def handle(self):
-		self.data = self.request.recv(1024).strip()
-		self.data = self.data.decode().splitlines()
+    
+    def handle(self):
+        self.data = self.request.recv(1024).strip()
+        self.data = self.data.decode().splitlines()
 
-		# extract information
-		method = self.data[0].split()[0]
-		path = self.data[0].split()[1]
-		host = "http://" + self.data[1].split()[1]
-		target_path = os.path.abspath(os.getcwd()) + '/www' + path
+        # extract information
+        method = self.data[0].split()[0]
+        path = self.data[0].split()[1]
+        host = "http://" + self.data[1].split()[1]
+        target_path = os.path.abspath(os.getcwd()) + '/www'
 
+        if method != "GET":
+            # invalid method
+            self.method_not_allowed()
+        elif os.path.isdir(target_path+os.path.abspath(path)):
+            target_path += path
+            # location moved
+            if target_path[-1] != "/":
+                self.location_moved(host+path+"/")
+            else:
+                is_dir = True
+                self.successful_response(target_path, is_dir)
+        elif os.path.isfile(target_path+os.path.abspath(path)):
+            # the path is a file
+            self.successful_response(target_path+path)
+        else:
+            # invalid path
+            self.invalid_path()
 
-		if method != "GET":
-			# invalid method
-			self.method_not_allowed()
-		elif os.path.isdir(target_path):
-			# location moved
-			if target_path[-1] != "/":
-				self.location_moved(host+path+"/")
-			else:
-				is_dir = True
-				self.successful_response(target_path, is_dir)
-		elif os.path.isfile(target_path):
-			self.successful_response(target_path)
-		else:
-			# invalid path
-			self.invalid_path()
+    # compose and send response
+    def send_response(self, status, header, content):
+        response = "HTTP/1.1 {}\r\n{}\r\n".format(status, header)
+        response += content
+        self.request.sendall(bytearray(response,'utf-8'))
 
-	# compose and send response
-	def send_response(self, status, header, content):
-		response = "HTTP/1.1 {}\r\n{}\r\n".format(status, header)
-		response += content
-		self.request.sendall(bytearray(response,'utf-8'))
+    # handles invalid method
+    def method_not_allowed(self):
+        status = "405 Method Not Allowed"
+        header = ""
+        content = ""
+        self.send_response(status, header, content)
 
-	# handles invalid method
-	def method_not_allowed(self):
-		status = "405 Method Not Allowed"
-		header = ""
-		content = ""
-		self.send_response(status, header, content)
+    # correct path
+    def location_moved(self, address):
+        status = "301 Moved Permanently"
+        header = "Content-Type: text/html \r\nLocation: " + address + "\r\n"
+        content = """
+                <html>
+                <body>
+                <h1> 301 Moved Permanently </h1>
+                </body>
+                </html>"""
+        self.send_response(status, header, content)
 
-	# correct path
-	def location_moved(self, address):
-		status = "301 Moved Permanently"
-		header = "Content-Type: text/html \r\nLocation: " + address + "\r\n"
-		content = """
-				<!DOCTYPE html>
-				<html>
-				<body>
-				<h1> 301 Moved Permanently </h1>
-				</body>
-				</html>"""
-		self.send_response(status, header, content)
+    # handles invalid path
+    def invalid_path(self):
+        status = "404 Not Found"
+        header = "Content-Type: text/html\r\n"
+        content = """
+                <html>
+                <body>
+                <h1> 404 Not Found </h1>
+                </body>
+                </html>"""
+        self.send_response(status, header, content)
 
-	# handles invalid path
-	def invalid_path(self):
-		status = "404 Not Found"
-		header = "Content-Type: text/html\r\n"
-		content = """
-				<!DOCTYPE html>
-				<html>
-				<body>
-				<h1> 404 Not Found </h1>
-				</body>
-				</html>"""
-		self.send_response(status, header, content)
-
-	# valid request
-	def successful_response(self, target_path, is_dir=False):
-		status = "200 OK"
-		if is_dir:
-			header = "Content-Type: text/html\r\n"
-			content = open(target_path+"index.html").read()
-		else:
-			# get the extension of the file
-			ext = target_path.split(".")[-1]
-			header = "Content-Type: text/" + ext + "\r\n"
-			content = open(target_path).read()
-		self.send_response(status, header, content)
+    # valid request
+    def successful_response(self, target_path, is_dir=False):
+        status = "200 OK"
+        if is_dir:
+            header = "Content-Type: text/html\r\n"
+            content = open(target_path+"index.html").read()
+        else:
+            # get the extension of the file
+            ext = target_path.split(".")[-1]
+            header = "Content-Type: text/" + ext + "\r\n"
+            content = open(target_path).read()
+        self.send_response(status, header, content)
 
 
 if __name__ == "__main__":
-	HOST, PORT = "localhost", 8080
+    HOST, PORT = "localhost", 8080
 
-	socketserver.TCPServer.allow_reuse_address = True
-	# Create the server, binding to localhost on port 8080
-	server = socketserver.TCPServer((HOST, PORT), MyWebServer)
+    socketserver.TCPServer.allow_reuse_address = True
+    # Create the server, binding to localhost on port 8080
+    server = socketserver.TCPServer((HOST, PORT), MyWebServer)
 
-	# Activate the server; this will keep running until you
-	# interrupt the program with Ctrl-C
-	server.serve_forever()
+    # Activate the server; this will keep running until you
+    # interrupt the program with Ctrl-C
+    server.serve_forever()
