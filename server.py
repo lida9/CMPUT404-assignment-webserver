@@ -81,9 +81,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
         content = """
                 <html>
                 <body>
-                <h1> 301 Moved Permanently </h1>
+                <h1> 301 Moved Permanently to {}</h1>
                 </body>
-                </html>"""
+                </html>""".format(address)
         self.send_response(status, header, content)
 
     # handles invalid path
